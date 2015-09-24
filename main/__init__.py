@@ -11,15 +11,41 @@ CHANNELS = ('b', 'g', 'r')
 def main():
 	query_size = 10
 
-	train_base = load_train()
-	some_a_image = train_base[0][0]  # 0-th image from the 0-th class
-	some_b_image = train_base[0][1]  # 1-st image from the 0-th class
+	train_database = load_database('train')
+	test_database = load_database('test')
 
-	a_hist = get_histogram(some_a_image)
-	b_hist = get_histogram(some_b_image)
+	for image in test_database:
+		plt.figure()
+		plt.imshow(image)
 
-	diff = compare_histograms(a_hist, b_hist)
-	z = 0
+	plt.show()
+
+
+def load_database(mode='train'):
+	if mode == 'train':
+		n_classes = 10
+		files_per_class = []
+		for i in xrange(n_classes):
+			i_images = []
+
+			path_to_class = os.path.join('..', 'images', mode, 'classe' + str(i))
+			i_files = os.listdir(path_to_class)
+			for some_file in i_files:
+				i_images += [cv2.imread(os.path.join(path_to_class, some_file))]
+			files_per_class += [i_images]
+	elif mode == 'test':
+		path = os.path.join('..', 'images', mode)
+		image_names = os.listdir(path)
+		images = []
+		for some_file in image_names:
+			images += [cv2.imread(os.path.join(path, some_file))]
+
+		return images
+
+	else:
+		raise NameError('invalid database mode!')
+
+	return files_per_class
 
 
 def compare_histograms(a_hist, b_hist, method=cv2.HISTCMP_CHISQR):
@@ -51,21 +77,6 @@ def compare_histograms(a_hist, b_hist, method=cv2.HISTCMP_CHISQR):
 		diff = cv2.compareHist(a_hist, b_hist, method=cv2.HISTCMP_CHISQR)
 
 	return np.mean(diff)
-
-
-def load_train():
-	n_classes = 10
-	files_per_class = []
-	for i in xrange(n_classes):
-		i_images = []
-
-		path_to_class = os.path.join('..', 'images', 'train', 'classe' + str(i))
-		i_files = os.listdir(path_to_class)
-		for some_file in i_files:
-			i_images += [cv2.imread(os.path.join(path_to_class, some_file))]
-		files_per_class += [i_images]
-
-	return files_per_class
 
 
 def plot_figure(img):
