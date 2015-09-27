@@ -5,8 +5,7 @@ import cv2
 from matplotlib import pyplot as plt
 from skimage.measure import structural_similarity as ssim
 
-from ImageRetrieval import CHANNELS
-
+CHANNELS = ('b', 'g', 'r')
 
 def mean_rgb(image):
 	"""

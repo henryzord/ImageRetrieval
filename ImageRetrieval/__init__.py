@@ -1,50 +1,59 @@
 __author__ = 'Henry, Thomas'
 
-from ImageRetrieval import compare_images
 import os
 from features import *
-
-
-CHANNELS = ('b', 'g', 'r')
 
 
 def main():
 	query_size = 10
 
-	# TODO reactivate!
+	# train_database = load_database('train')
+	# test_database = load_database('test')
+
 	a_image = cv2.imread('..\\images\\test\\1.jpg')
 	a_image = cv2.cvtColor(a_image, cv2.COLOR_BGR2RGB)
 
 	b_image = cv2.imread('..\\images\\test\\101.jpg')
 	b_image = cv2.cvtColor(b_image, cv2.COLOR_BGR2RGB)
 
-	# train_database = load_database('train')
-	# test_database = load_database('test')
+	c_image = cv2.imread('..\\images\\train\\classe0\\9.jpg')
+	c_image = cv2.cvtColor(c_image, cv2.COLOR_BGR2RGB)
 
-	# for drawing contours:
-	# img = cv2.drawContours(image, contours, -1, (0, 255, 0), 3)
-	# plt.imshow(img)
+	a_hist = get_histogram(a_image)
+	b_hist = get_histogram(b_image)
+	c_hist = get_histogram(c_image)
 
-	# d2 = sd.computeDistance(contours_a[0], contours_b[0])
+	distances = dict()
+	distances[hausdorff_distance(a_image, c_image)] = 'a'
+	distances[hausdorff_distance(b_image, c_image)] = 'b'
 
-	print 'Hausdorff Distance:', hausdorff_distance(a_image, b_image)
-
-	# _, ca, _ = cv2.findContours(test_database[0], cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_KCOS)
-	# _, cb, _ = cv2.findContours(test_database[1], cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_KCOS)
+	histograms = dict()
+	histograms[compare_histogram(a_hist, c_hist)] = 'a'
+	histograms[compare_histogram(b_hist, c_hist)] = 'b'
 
 	# TODO fazer uma abertura e um fechamento!
+	closest_distance = min(distances.keys())
+	closest_histogram = min(histograms.keys())
 
-	#
-	# d1 = hd.computeDistance(ca[0], cb[0])
-	# d2 = sd.computeDistance(ca[0], cb[0])
-	#
-	# print d1, " ", d2
+	print 'distance:', distances[closest_distance], 'histogram:', histograms[closest_histogram]
+	for img in [a_image, b_image, c_image]:
+		plt.figure()
+		plt.imshow(img)
+	plt.show()
 
-	# for image in test_database:
-	# 	plt.figure()
-	# 	plt.imshow(image)
-	#
-	# plt.show()
+
+def draw_contours(colored_img):
+	"""
+	Given an (RGB colored) image, draw its contours.
+	:param colored_img: An RGB colored image.
+	"""
+	gray_img = cv2.cvtColor(colored_img, cv2.COLOR_RGB2GRAY)
+	ret, thresh = cv2.threshold(gray_img, 127, 255, 0)
+	contours_img, contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+	# for drawing contours:
+	colored_img = cv2.drawContours(contours_img, contours, -1, (0, 255, 0), 3)
+	plt.imshow(colored_img)
 
 
 # ############ #
