@@ -1,25 +1,50 @@
-__author__ = 'Henry'
+__author__ = 'Henry, Thomas'
 
-
+from ImageRetrieval import compare_images
 import os
-import cv2
 from features import *
-from utils import *
-from matplotlib import pyplot as plt
+
 
 CHANNELS = ('b', 'g', 'r')
+
 
 def main():
 	query_size = 10
 
-	train_database = load_database('train')
-	test_database = load_database('test')
+	# TODO reactivate!
+	a_image = cv2.imread('..\\images\\test\\1.jpg')
+	a_image = cv2.cvtColor(a_image, cv2.COLOR_BGR2RGB)
 
-	for image in test_database:
-		plt.figure()
-		plt.imshow(image)
+	b_image = cv2.imread('..\\images\\test\\101.jpg')
+	b_image = cv2.cvtColor(b_image, cv2.COLOR_BGR2RGB)
 
-	plt.show()
+	# train_database = load_database('train')
+	# test_database = load_database('test')
+
+	# for drawing contours:
+	# img = cv2.drawContours(image, contours, -1, (0, 255, 0), 3)
+	# plt.imshow(img)
+
+	# d2 = sd.computeDistance(contours_a[0], contours_b[0])
+
+	print 'Hausdorff Distance:', hausdorff_distance(a_image, b_image)
+
+	# _, ca, _ = cv2.findContours(test_database[0], cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_KCOS)
+	# _, cb, _ = cv2.findContours(test_database[1], cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_KCOS)
+
+	# TODO fazer uma abertura e um fechamento!
+
+	#
+	# d1 = hd.computeDistance(ca[0], cb[0])
+	# d2 = sd.computeDistance(ca[0], cb[0])
+	#
+	# print d1, " ", d2
+
+	# for image in test_database:
+	# 	plt.figure()
+	# 	plt.imshow(image)
+	#
+	# plt.show()
 
 
 # ############ #
@@ -49,7 +74,6 @@ def main():
 def pre_processing1(path, filename, test_set):
 	result_file = path + filename
 
-
 	if os.path.exists(result_file):
 		print 'Pre-processed file already exists in \'%s\'' % result_file
 		return
@@ -73,7 +97,7 @@ def pre_processing(image_a, path, test_set, limit=50):
 			print 'Processing image %s' % imageFile
 			image_b = cv2.imread(path + imageFile)
 			image_b = cv2.cvtColor(image_b, cv2.COLOR_BGR2RGB)
-			value = utils.compare_two_images(image_a, image_b)
+			value = compare_images(image_a, image_b)
 			some_similarity.append((imageFile, value))
 
 			if len(some_similarity) == limit:
@@ -109,7 +133,6 @@ def load_database(mode='train'):
 			i_files = os.listdir(path_to_class)
 			for some_file in i_files:
 				some_image = cv2.imread(os.path.join(path_to_class, some_file))
-				# flips from BGR to RGB
 				some_image = cv2.cvtColor(some_image, cv2.COLOR_BGR2RGB)
 				i_images += [some_image]
 			files_per_class += [i_images]
@@ -130,75 +153,9 @@ def load_database(mode='train'):
 	return files_per_class
 
 
-def compare_histogram(a_hist, b_hist, method=cv2.HISTCMP_CHISQR):
-	"""
-	Compares two histograms, whether they represent greyscale images
-		or colored ones.
-	:param a_hist: image A histogram.
-	:param b_hist: image B histogram.
-	:param method: Comparison method. May be one of the following:
-
-		CV_COMP_CORREL - Correlation
-
-		CV_COMP_CHISQR - Chi-Square
-
-		CV_COMP_INTERSECT - Intersection
-
-		CV_COMP_BHATTACHARYYA - Bhattacharyya distance
-
-		CV_COMP_HELLINGER - Synonym for CV_COMP_BHATTACHARYYA
-
-		Please refer to OpenCV documentation for further details.
-	:return: The result of the comparison between two histograms.
-	"""
-	if isinstance(a_hist, list) and isinstance(b_hist, list):
-		diff = []
-		for i, channel in enumerate(CHANNELS):
-			diff += [cv2.compareHist(a_hist[i], b_hist[i], method=method)]
-	else:
-		diff = cv2.compareHist(a_hist, b_hist, method=cv2.HISTCMP_CHISQR)
-
-	return np.mean(diff)
-
-
 def plot_figure(img):
 	plt.figure()
 	plt.imshow(img)
-
-
-def get_histogram(img, **kwargs):
-	greyscale = False if 'greyscale' not in kwargs else kwargs['greyscale']
-
-	if greyscale:
-		raise NameError('not implemented yet!')
-	else:
-		hist = []
-		for i, col in enumerate(CHANNELS):
-			hist += [cv2.calcHist([img], [i], None, [256], [0, 256])]
-		return hist
-
-
-def plot_histogram(**kwargs):
-	greyscale = False if 'greyscale' not in kwargs else kwargs['greyscale']
-	img = None if 'img' not in kwargs else kwargs['img']
-	hist = None if 'hist' not in kwargs else kwargs['hist']
-
-	plt.figure()
-
-	if img is not None:
-		if greyscale:
-			hist = cv2.calcHist([img], [0], None, [256], [0, 256])
-		else:
-			hist = list()
-			for i, col in enumerate(CHANNELS):
-				hist += [cv2.calcHist([img], [i], None, [256], [0, 256])]
-
-	if isinstance(hist, list):
-		for i, col in enumerate(CHANNELS):
-			plt.plot(hist[i], color=col)
-			plt.xlim([0, 256])
-	else:
-		plt.hist(img.ravel(), 256, [0, 256])
 
 
 if __name__ == '__main__':
