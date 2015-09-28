@@ -1,45 +1,55 @@
+import itertools
+
 __author__ = 'Henry, Thomas'
 
 import os
 from features import *
 
 
+CLASSES = ['african', 'beach', 'buildings', 'buses', 'dinosaurs', 'elephants', 'flowers', 'horses', 'mountains', 'food']
+
+
 def main():
 	query_size = 10
 
-	# train_database = load_database('train')
-	# test_database = load_database('test')
+	train_database = load_database('train')
+	test_database = load_database('test')
 
-	a_image = cv2.imread('..\\images\\test\\1.jpg')
-	a_image = cv2.cvtColor(a_image, cv2.COLOR_BGR2RGB)
-
-	b_image = cv2.imread('..\\images\\test\\101.jpg')
-	b_image = cv2.cvtColor(b_image, cv2.COLOR_BGR2RGB)
-
-	c_image = cv2.imread('..\\images\\train\\classe0\\9.jpg')
-	c_image = cv2.cvtColor(c_image, cv2.COLOR_BGR2RGB)
-
-	a_hist = get_histogram(a_image)
-	b_hist = get_histogram(b_image)
-	c_hist = get_histogram(c_image)
-
-	distances = dict()
-	distances[hausdorff_distance(a_image, c_image)] = 'a'
-	distances[hausdorff_distance(b_image, c_image)] = 'b'
-
-	histograms = dict()
-	histograms[compare_histogram(a_hist, c_hist)] = 'a'
-	histograms[compare_histogram(b_hist, c_hist)] = 'b'
-
-	# TODO fazer uma abertura e um fechamento!
-	closest_distance = min(distances.keys())
-	closest_histogram = min(histograms.keys())
-
-	print 'distance:', distances[closest_distance], 'histogram:', histograms[closest_histogram]
-	for img in [a_image, b_image, c_image]:
+	for z, test_image in enumerate(test_database[:1]):
 		plt.figure()
-		plt.imshow(img)
+		plt.imshow(test_image['content'])
+		plt.title('query image #' + str(z) + ': ' + test_image['name'])
+
+		similar = calculate_similarity(test_image, train_database, query_size=query_size)
+		sum = 0
+		for i, some_dict in enumerate(similar):
+			if some_dict['class'] == test_image['class']:
+				sum += 1
+
+			plt.figure()
+			plt.imshow(some_dict['content'])
+			plt.title('most similar #' + str(i) + ': ' + some_dict['name'])
+
+		print 'accuracy:', float(sum) / len(similar)
+
 	plt.show()
+
+
+def calculate_similarity(query_image, database, query_size=10):
+	q_hist = get_histogram(query_image['content'], greyscale=False)
+
+	vals = dict()
+	for some_class in database:
+		for image in some_class:
+			val_hist = compare_histogram(q_hist, get_histogram(image['content'], greyscale=False))
+			val_cont = hausdorff_distance(query_image['content'], image['content'])
+			vals[val_hist + val_cont] = image
+
+	items = vals.items()
+	items = sorted(items, key=lambda x: x[0], reverse=True)
+	most_similar = items[:query_size]
+	most_similar = map(lambda x: x[1], most_similar)
+	return most_similar
 
 
 def draw_contours(colored_img):
@@ -143,16 +153,16 @@ def load_database(mode='train'):
 			for some_file in i_files:
 				some_image = cv2.imread(os.path.join(path_to_class, some_file))
 				some_image = cv2.cvtColor(some_image, cv2.COLOR_BGR2RGB)
-				i_images += [some_image]
+				i_images += [{'name': some_file, 'class': CLASSES[i], 'content': some_image}]
 			files_per_class += [i_images]
 	elif mode == 'test':
 		path = os.path.join('..', 'images', mode)
 		image_names = os.listdir(path)
-		images = []
-		for some_file in image_names:
+		images = list()
+		for i, some_file in enumerate(image_names):
 			some_image = cv2.imread(os.path.join(path, some_file))
 			some_image = cv2.cvtColor(some_image, cv2.COLOR_BGR2RGB)
-			images += [some_image]
+			images += [{'name': some_file, 'class': CLASSES[i], 'content': some_image}]
 
 		return images
 

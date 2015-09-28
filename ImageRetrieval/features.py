@@ -106,7 +106,6 @@ def hausdorff_distance(a_image, b_image):
 	ret_a, thresh_a = cv2.threshold(a_gray, 127, 255, 0)
 	img_a, contours_a, hierarchy_a = cv2.findContours(thresh_a, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-
 	b_gray = cv2.cvtColor(b_image, cv2.COLOR_RGB2GRAY)
 	ret_b, thresh_b = cv2.threshold(b_gray, 127, 255, 0)
 	img_b, contours_b, hierarchy_b = cv2.findContours(thresh_b, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -143,7 +142,7 @@ def compare_histogram(a_hist, b_hist, method=cv2.HISTCMP_CHISQR):
 		for i, channel in enumerate(CHANNELS):
 			diff += [cv2.compareHist(a_hist[i], b_hist[i], method=method)]
 	else:
-		diff = cv2.compareHist(a_hist, b_hist, method=cv2.HISTCMP_CHISQR)
+		diff = cv2.compareHist(a_hist, b_hist, method=method)
 
 	return np.mean(diff)
 
