@@ -46,7 +46,7 @@ def calculate_similarity(query_image, database, query_size=10):
 			vals[val_hist + val_cont] = image
 
 	items = vals.items()
-	items = sorted(items, key=lambda x: x[0], reverse=True)
+	items = sorted(items, key=lambda x: x[0], reverse=False)
 	most_similar = items[:query_size]
 	most_similar = map(lambda x: x[1], most_similar)
 	return most_similar
