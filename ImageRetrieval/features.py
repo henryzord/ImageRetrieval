@@ -1,11 +1,29 @@
 ﻿__author__ = 'Henry, Thomas'
 
+import math
 import numpy as np
 import cv2
+from enum import Enum
 from matplotlib import pyplot as plt
 from skimage.measure import structural_similarity as ssim
 
 CHANNELS = ('b', 'g', 'r')
+
+class Method(Enum):
+    mean_rgb = 1
+    mean_squared_error = 2
+    hausdorff_distance = 3
+    structural_similarity = 4
+    histogram_with_bhattacharyya = 5
+    histogram_with_chisqr = 6
+    histogram_with_correl = 7
+    histogram_with_intersect = 8
+
+def calculate_mean_rgb(image_a, image_b):
+    mean_a = mean_rgb(image_a)
+    mean_b = mean_rgb(image_b)
+    dist = math.sqrt((mean_a[0] - mean_b[0]) ** 2 + (mean_a[1] - mean_b[1]) ** 2 + (mean_a[2] - mean_b[2]) ** 2)
+    return dist
 
 def mean_rgb(image):
 	"""
@@ -26,8 +44,10 @@ def mean_squared_error(image_a, image_b):
 	"""
 
 	# TODO document me thomas!
-	squared_error = np.sum((image_a.astype("float") - image_b.astype("float")) ** 2)
-	squared_error /= float(image_a.shape[0] * image_a.shape[1])
+	im_a = np.copy(image_a[0:255,0:255])
+	im_b = np.copy(image_b[0:255,0:255])
+	squared_error = np.sum((im_a.astype("float") - im_b.astype("float")) ** 2)
+	squared_error /= float(im_a.shape[0] * im_a.shape[1])
 	return squared_error
 
 
@@ -145,30 +165,3 @@ def compare_histogram(a_hist, b_hist, method=cv2.HISTCMP_CHISQR):
 		diff = cv2.compareHist(a_hist, b_hist, method=method)
 
 	return np.mean(diff)
-
-
-def structural_similarity(image_a, image_b):
-	"""
-
-	:param image_a:
-	:param image_b:
-	:return:
-	"""
-	# TODO document me thomas!
-	im_a = np.copy(image_a[0:255,0:255])
-	im_b = np.copy(image_b[0:255,0:255])
-	return ssim(im_a, im_b)
-
-
-def compare_images(image_a, image_b):
-	"""
-
-	:param image_a:
-	:param image_b:
-	:return:
-	"""
-	# TODO document me thomas!
-	# ssim = utils.get_structural_similarity(image_a, image_b)
-	# hist = utils.get_histogram_comparison(image_a, image_b)
-	sq = mean_squared_error(image_a, image_b)
-	return sq

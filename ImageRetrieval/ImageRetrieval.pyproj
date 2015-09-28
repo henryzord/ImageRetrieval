@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>019fdcce-a932-483a-80b6-890bacf1b222</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>image_retrieval.py</StartupFile>
+    <StartupFile>__init__.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -22,15 +22,8 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="feature_extractor.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="image_retrieval.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="utils.py">
-      <SubType>Code</SubType>
-    </Compile>
+    <Compile Include="features.py" />
+    <Compile Include="__init__.py" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

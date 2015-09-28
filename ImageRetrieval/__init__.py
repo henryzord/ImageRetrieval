@@ -1,4 +1,4 @@
-import itertools
+﻿import itertools
 
 __author__ = 'Henry, Thomas'
 
@@ -9,48 +9,83 @@ from features import *
 CLASSES = ['african', 'beach', 'buildings', 'buses', 'dinosaurs', 'elephants', 'flowers', 'horses', 'mountains', 'food']
 
 
-def main():
+def main(method=Method.mean_rgb.value,plot=True):
 	query_size = 10
+	total_accuracy = 0
 
 	train_database = load_database('train')
 	test_database = load_database('test')
 
-	for z, test_image in enumerate(test_database[:1]):
-		plt.figure()
-		plt.imshow(test_image['content'])
-		plt.title('query image #' + str(z) + ': ' + test_image['name'])
+	print '====== Using method %s ======'%(Method(method))
 
-		similar = calculate_similarity(test_image, train_database, query_size=query_size)
+	for z, test_image in enumerate(test_database):
+		
+		if plot:
+			fig = plt.figure()
+			add_subplot(fig, test_image['content'], 3, 'Query image #' + str(z) + ': ' + test_image['name'])
+
+		similar = calculate_similarity(test_image, train_database, query_size=query_size, method=method)
+
 		sum = 0
 		for i, some_dict in enumerate(similar):
 			if some_dict['class'] == test_image['class']:
 				sum += 1
 
-			plt.figure()
-			plt.imshow(some_dict['content'])
-			plt.title('most similar #' + str(i) + ': ' + some_dict['name'])
+			if plot:
+			    add_subplot(fig, some_dict['content'], i + 6, '#' + str(i) + ': ' + some_dict['name'] + ' - ' + some_dict['class'])
 
-		print 'accuracy:', float(sum) / len(similar)
+		accuracy = float(sum) / len(similar)
+		total_accuracy += accuracy;
+		print 'accuracy: ', accuracy
 
-	plt.show()
+	print 'Total accuracy: ', total_accuracy/10
+	print '\n'
+	
+	if plot:
+		fig.canvas.set_window_title('Method: %s - Accuracy: %s'%(Method(method).name, str(accuracy)))
+		plt.show()
 
 
-def calculate_similarity(query_image, database, query_size=10):
+def calculate_similarity(query_image, database, query_size=10, method=Method.mean_rgb.value):
 	q_hist = get_histogram(query_image['content'], greyscale=False)
-
 	vals = dict()
 	for some_class in database:
 		for image in some_class:
-			val_hist = compare_histogram(q_hist, get_histogram(image['content'], greyscale=False))
-			val_cont = hausdorff_distance(query_image['content'], image['content'])
-			vals[val_hist + val_cont] = image
+		    val = chose_method_and_calculate(method, query_image['content'], image['content'], q_hist);
+		    vals[val] = image
 
 	items = vals.items()
 	items = sorted(items, key=lambda x: x[0], reverse=False)
+
+	if method.value == Method.histogram_with_correl.value or method.value == Method.histogram_with_intersect.value:
+		items = sorted(items, key=lambda x: x[0], reverse=True)
+	else:
+		items = sorted(items, key=lambda x: x[0], reverse=False)
+
 	most_similar = items[:query_size]
 	most_similar = map(lambda x: x[1], most_similar)
 	return most_similar
 
+def chose_method_and_calculate(method, image_a, image_b, q_hist):
+    """
+    """
+    if method.value == Method.mean_rgb.value:
+        val = calculate_mean_rgb(image_a, image_b)
+    elif method.value == Method.mean_squared_error.value:
+        val = mean_squared_error(image_a, image_b)
+    elif method.value == Method.histogram_with_bhattacharyya.value:
+        val = compare_histogram(q_hist, get_histogram(image_b, greyscale=False), method=cv2.HISTCMP_BHATTACHARYYA)
+    elif method.value == Method.histogram_with_chisqr.value:
+        val = compare_histogram(q_hist, get_histogram(image_b, greyscale=False), method=cv2.HISTCMP_CHISQR)
+    elif method.value == Method.histogram_with_correl.value:
+        val = compare_histogram(q_hist, get_histogram(image_b, greyscale=False), method=cv2.HISTCMP_CORREL)
+    elif method.value == Method.histogram_with_intersect.value:
+        val = compare_histogram(q_hist, get_histogram(image_b, greyscale=False), method=cv2.HISTCMP_INTERSECT)
+    elif method.value == Method.hausdorff_distance.value:
+        val = hausdorff_distance(image_a, image_b)
+    elif method.value == Method.structural_similarity.value:
+        val = structural_similarity(image_a, image_b)
+    return val
 
 def draw_contours(colored_img):
 	"""
@@ -64,74 +99,6 @@ def draw_contours(colored_img):
 	# for drawing contours:
 	colored_img = cv2.drawContours(contours_img, contours, -1, (0, 255, 0), 3)
 	plt.imshow(colored_img)
-
-
-# ############ #
-# Thomas' code #
-# ############ #
-
-# path = "database/image.orig/"
-# pre_processing_path = "pre_processing/"
-# pre_processing_file = "features.txt"
-# test_set = [1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
-# images_test_set = []
-
-# image_a = cv2.imread(path + '1.jpg')
-# image_a = cv2.cvtColor(image_a, cv2.COLOR_BGR2RGB)
-# # imageB = cv2.imread(path + '1.jpg', cv2.IMREAD_COLOR)
-# # imageB = cv2.cvtColor(imageB, cv2.COLOR_BGR2GRAY)
-# # print compareTwoImages(imageA, imageB)
-# some_similarity = pre_processing(image_a, 50)
-# some_similarity = sorted(some_similarity, key=get_key)
-#
-# for i in range(10):
-# print some_similarity[i]
-#
-# # retrieveSimilarImages()
-
-
-def pre_processing1(path, filename, test_set):
-	result_file = path + filename
-
-	if os.path.exists(result_file):
-		print 'Pre-processed file already exists in \'%s\'' % result_file
-		return
-
-	some_file = open(result_file, 'w')
-	for image in os.listdir(path):
-		if int(image[:len(image) - 4]) not in test_set:
-			img = cv2.imread(path + image, cv2.IMREAD_COLOR)
-			img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-			b, g, r = mean_rgb(img)
-			some_histogram = histogram(img)
-			line = '%s,%s,%s,%s,%s\n' % (image, b, g, r, some_histogram)
-			some_file.write(line)
-	some_file.close()
-
-
-def pre_processing(image_a, path, test_set, limit=50):
-	some_similarity = []
-	for imageFile in os.listdir(path):
-		if int(imageFile[:len(imageFile) - 4]) not in test_set:
-			print 'Processing image %s' % imageFile
-			image_b = cv2.imread(path + imageFile)
-			image_b = cv2.cvtColor(image_b, cv2.COLOR_BGR2RGB)
-			value = compare_images(image_a, image_b)
-			some_similarity.append((imageFile, value))
-
-			if len(some_similarity) == limit:
-				break
-
-	return some_similarity
-
-
-def process():
-	pass
-
-
-def get_key(item):
-	return item[1]
-
 
 def load_database(mode='train'):
 	"""
@@ -148,7 +115,7 @@ def load_database(mode='train'):
 		for i in xrange(n_classes):
 			i_images = []
 
-			path_to_class = os.path.join('..', 'images', mode, 'classe' + str(i))
+			path_to_class = os.path.join('..', 'images', mode, 'classe' + str(i + 1))
 			i_files = os.listdir(path_to_class)
 			for some_file in i_files:
 				some_image = cv2.imread(os.path.join(path_to_class, some_file))
@@ -171,11 +138,24 @@ def load_database(mode='train'):
 
 	return files_per_class
 
-
-def plot_figure(img):
-	plt.figure()
-	plt.imshow(img)
-
+def add_subplot(fig, image, position, title):
+    """
+    Adds an image to a given plot in a specific position
+    and with a given title.
+    :param fig: the plot to add the subplot
+    :param image: the image of the subplot
+    :param position: the position of the subplot
+    :param title: the title of the subplot
+    """
+    ax1 = fig.add_subplot(3,5,position)
+    ax1.imshow(image)
+    ax1.set_title(title)
 
 if __name__ == '__main__':
-	main()
+    main(method=Method.histogram_with_bhattacharyya,plot=False)
+    main(method=Method.histogram_with_chisqr,plot=False)
+    main(method=Method.histogram_with_correl,plot=False)
+    main(method=Method.histogram_with_intersect,plot=False)
+    main(method=Method.hausdorff_distance,plot=False)
+    main(method=Method.mean_rgb,plot=False)
+    main(method=Method.mean_squared_error,plot=False)

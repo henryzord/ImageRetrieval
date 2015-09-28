@@ -1,0 +1,160 @@
+﻿import itertools
+
+__author__ = 'Henry, Thomas'
+
+import os
+from features import *
+
+
+CLASSES = ['african', 'beach', 'buildings', 'buses', 'dinosaurs', 'elephants', 'flowers', 'horses', 'mountains', 'food']
+
+
+def main(method=Method.mean_rgb.value,plot=True):
+	query_size = 10
+	total_accuracy = 0
+
+	train_database = load_database('train')
+	test_database = load_database('test')
+
+	print '====== Using method %s ======'%(Method(method))
+
+	for z, test_image in enumerate(test_database):
+		
+		if plot:
+			fig = plt.figure()
+			add_subplot(fig, test_image['content'], 3, 'Query image #' + str(z) + ': ' + test_image['name'])
+
+		similar = calculate_similarity(test_image, train_database, query_size=query_size, method=method)
+
+		sum = 0
+		for i, some_dict in enumerate(similar):
+			if some_dict['class'] == test_image['class']:
+				sum += 1
+
+			if plot:
+			    add_subplot(fig, some_dict['content'], i + 6, '#' + str(i) + ': ' + some_dict['name'] + ' - ' + some_dict['class'])
+
+		accuracy = float(sum) / len(similar)
+		total_accuracy += accuracy;
+		print 'accuracy: ', accuracy
+
+	print 'Total accuracy: ', total_accuracy/10
+	print '\n'
+	
+	if plot:
+		fig.canvas.set_window_title('Method: %s - Accuracy: %s'%(Method(method).name, str(accuracy)))
+		plt.show()
+
+
+def calculate_similarity(query_image, database, query_size=10, method=Method.mean_rgb.value):
+	q_hist = get_histogram(query_image['content'], greyscale=False)
+	vals = dict()
+	for some_class in database:
+		for image in some_class:
+		    val = chose_method_and_calculate(method, query_image['content'], image['content'], q_hist);
+		    vals[val] = image
+
+	items = vals.items()
+
+	if method.value == Method.histogram_with_correl.value or method.value == Method.histogram_with_intersect.value:
+		items = sorted(items, key=lambda x: x[0], reverse=True)
+	else:
+		items = sorted(items, key=lambda x: x[0], reverse=False)
+
+	most_similar = items[:query_size]
+	most_similar = map(lambda x: x[1], most_similar)
+	return most_similar
+
+def chose_method_and_calculate(method, image_a, image_b, q_hist):
+    """
+    """
+    if method.value == Method.mean_rgb.value:
+        val = calculate_mean_rgb(image_a, image_b)
+    elif method.value == Method.mean_squared_error.value:
+        val = mean_squared_error(image_a, image_b)
+    elif method.value == Method.histogram_with_bhattacharyya.value:
+        val = compare_histogram(q_hist, get_histogram(image_b, greyscale=False), method=cv2.HISTCMP_BHATTACHARYYA)
+    elif method.value == Method.histogram_with_chisqr.value:
+        val = compare_histogram(q_hist, get_histogram(image_b, greyscale=False), method=cv2.HISTCMP_CHISQR)
+    elif method.value == Method.histogram_with_correl.value:
+        val = compare_histogram(q_hist, get_histogram(image_b, greyscale=False), method=cv2.HISTCMP_CORREL)
+    elif method.value == Method.histogram_with_intersect.value:
+        val = compare_histogram(q_hist, get_histogram(image_b, greyscale=False), method=cv2.HISTCMP_INTERSECT)
+    elif method.value == Method.hausdorff_distance.value:
+        val = hausdorff_distance(image_a, image_b)
+    elif method.value == Method.structural_similarity.value:
+        val = structural_similarity(image_a, image_b)
+    return val
+
+def draw_contours(colored_img):
+	"""
+	Given an (RGB colored) image, draw its contours.
+	:param colored_img: An RGB colored image.
+	"""
+	gray_img = cv2.cvtColor(colored_img, cv2.COLOR_RGB2GRAY)
+	ret, thresh = cv2.threshold(gray_img, 127, 255, 0)
+	contours_img, contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+	# for drawing contours:
+	colored_img = cv2.drawContours(contours_img, contours, -1, (0, 255, 0), 3)
+	plt.imshow(colored_img)
+
+def load_database(mode='train'):
+	"""
+	Method based on Henry code. May be replaced with Thomas' method.
+
+	WARNING: either way, the channels of the images are RGB, but OpenCV loads them as BGR.
+		This method already does this.
+	:param mode: either train or test.
+	:return:
+	"""
+	if mode == 'train':
+		n_classes = 10
+		files_per_class = []
+		for i in xrange(n_classes):
+			i_images = []
+
+			path_to_class = os.path.join('..', 'images', mode, 'classe' + str(i + 1))
+			i_files = os.listdir(path_to_class)
+			for some_file in i_files:
+				some_image = cv2.imread(os.path.join(path_to_class, some_file))
+				some_image = cv2.cvtColor(some_image, cv2.COLOR_BGR2RGB)
+				i_images += [{'name': some_file, 'class': CLASSES[i], 'content': some_image}]
+			files_per_class += [i_images]
+	elif mode == 'test':
+		path = os.path.join('..', 'images', mode)
+		image_names = os.listdir(path)
+		images = list()
+		for i, some_file in enumerate(image_names):
+			some_image = cv2.imread(os.path.join(path, some_file))
+			some_image = cv2.cvtColor(some_image, cv2.COLOR_BGR2RGB)
+			images += [{'name': some_file, 'class': CLASSES[i], 'content': some_image}]
+
+		return images
+
+	else:
+		raise NameError('invalid database mode!')
+
+	return files_per_class
+
+def add_subplot(fig, image, position, title):
+    """
+    Adds an image to a given plot in a specific position
+    and with a given title.
+    :param fig: the plot to add the subplot
+    :param image: the image of the subplot
+    :param position: the position of the subplot
+    :param title: the title of the subplot
+    """
+    ax1 = fig.add_subplot(3,5,position)
+    ax1.imshow(image)
+    ax1.set_title(title)
+
+if __name__ == '__main__':
+    main(method=Method.histogram_with_bhattacharyya,plot=False)
+    main(method=Method.histogram_with_chisqr,plot=False)
+    main(method=Method.histogram_with_correl,plot=False)
+    main(method=Method.histogram_with_intersect,plot=False)
+    main(method=Method.hausdorff_distance,plot=False)
+    main(method=Method.mean_rgb,plot=False)
+    main(method=Method.mean_squared_error,plot=False)
